@@ -204,14 +204,80 @@ XLA provides an abstract interface that a new architecture or accelerator can im
 
 \section{JIT Compilation}
 
+The JIT compilation compiles and runs parts of TensorFlow graphs via XLA, it has the advantage of analyses and try to otmize to run several operation into a small number of compiled kernels, it means while Tensorflow runtime has to run each operation separately, the JIT can reduce memory bandwidth requirements and improve performance.
+
+There are two ways to run TensorFlow computations via XLA, either by JIT-compiling operators placed on a CPU or GPU device, or by placing operators on the XLA\_CPU or XLA\_GPU TensorFlow devices. It means, when describing the graph on python interface, the user can specify if the JIT compile will be used, or the automatic way (session), that you specify that a session will use JIT, and XLA will decide which operation must be done using the JIT.
+
+\subsection{Session - automatic}
+Turning on JIT compilation at the session level will result in all possible operators being greedily compiled into XLA computations. Each XLA computation will be compiled into one or more kernels for the underlying device.
+
+Follows an example of using that on python.
+
+\begin{minted}{python}
+# Config to turn on JIT compilation
+config = tf.ConfigProto()
+config.graph_options.optimizer_options.global_jit_level = tf.OptimizerOptions.ON_1
+
+sess = tf.Session(config=config)
+\end{minted}
+
+\subsection{Manual}
+
+In the manual mode you can decide which operation nodes must be done using JIT, for example:
+
+\begin{minted}{python}
+jit_scope = tf.contrib.compiler.jit.experimental_jit_scope
+
+x = tf.placeholder(np.float32)
+with jit_scope():
+    y = tf.add(x, x)  # The "add" will be compiled with XLA.
+\end{minted}
+
 \section{AOT compilation}
 \subsection{tfcompile}
 
-tfcompile is a standalone tool that ahead-of-time (AOT) compiles TensorFlow graphs into executable code. 
+tfcompile implements ahead-of-time (AOT) compilation for TensorFlow graphs, it means, it compiles Tensorflow model into native machine code, tfcompile uses LLVM API to generate native code, and make some optimization.
 
+The TensorFlow graph is normally executed by the TensorFlow runtime. This incurs some runtime overhead for execution of each node in the graph. This also leads to a larger total binary size, since the code for the TensorFlow runtime needs to be available, in addition to the graph itself, the tfcompile can reduce total binary size, and also avoid some runtime overheads.
 
+For use the tfcompile you have to follow some steps:
 
+\subsection{Configure the subgraph to compile}
 
+Identify the feeds and fetches that correspond to the input and output arguments for the generated function. Then configure the feeds and fetches in a tensorflow.tfcompile.Config proto.
+
+\begin{minted}{protobuf}
+# Each feed is a positional input argument for the generated function.  The order
+# of each entry matches the order of each input argument.  Here “x_hold” and “y_hold”
+# refer to the names of placeholder nodes defined in the graph.
+feed {
+  id { node_name: "x_hold" }
+  shape {
+    dim { size: 2 }
+    dim { size: 3 }
+  }
+}
+feed {
+  id { node_name: "y_hold" }
+  shape {
+    dim { size: 3 }
+    dim { size: 2 }
+  }
+}
+
+# Each fetch is a positional output argument for the generated function.  The order
+# of each entry matches the order of each output argument.  Here “x_y_prod”
+# refers to the name of a matmul node defined in the graph.
+fetch {
+  id { node_name: "x_y_prod" }
+}
+\end{minted}
+
+I haven't found a tool to make this step automatically, so you have to identify in the Tensorflow model which is the inputs and outputs.
+
+\subsection{Use tf_library build macro to compile the subgraph}
+
+This part use bazel to build the graph
 
 \appendix %% Up to you -- I just like to have the end notes as an appendix :-)
 \printnotes*
