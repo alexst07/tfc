@@ -1,0 +1,402 @@
+%% The openany option is here just to remove the blank pages before a new chapter
+\documentclass[11pt,openany]{book}
+
+\title{Endnotes using pagenote package at the end of a book}
+
+\usepackage{pagenote}
+
+%%%%%%%%%%%%% For customising the endnote markers. Comment these out if you don't want them.
+% To prefix each note number with the chapter number
+\renewcommand{\thepagenote}{\thechapter-\arabic{pagenote}}
+
+% To have a slightly different formatting for the endnote numbers in the text -- smaller text, sans-serif, square brackets
+\renewcommand\notenumintext[1]{\space{\footnotesize\sffamily[FN-#1]}}
+
+% To have a slightly different formatting for the endnote numbers in the notes section. Just the square brackets and sans-serif; normal size.
+\renewcommand\notenuminnotes[1]{{\sffamily[FN-#1] }}
+
+% If you want a different name/heading for the end notes
+\renewcommand{\notesname}{End Notes}
+%%%%%%%%%%%%% End customisation
+
+
+%% THIS LINE IS MANDATORY
+\makepagenote
+
+\usepackage{hyperref}
+\usepackage{minted}
+\usepackage{graphicx}
+
+\graphicspath{img/}
+
+\begin{document}
+
+\chapter{TensorFlow}
+\section{Intruduction}
+TensorFlow is a framework for numerical computation using data flow graphs. Nodes in the graph represent mathematical operations, and the graph edges represent the multidimensional data arrays (tensors) communicated between them. This architecture gives flexibility as process some nodes on a GPU and others on a CPU, or process the graph in a cluster.
+
+For example, if we want sum two constants using TensorFlow:
+
+\begin{minted}{python}
+node1 = tf.constant(3.0, dtype=tf.float32)
+node2 = tf.constant(4.0)
+node3 = tf.add(node1, node2)
+
+sess = tf.Session()
+print(sess.run(node3))
+\end{minted}
+
+This piece of code gives 7.0 as a result, so how it works, first we assembly the graph, after we create a session and run this graph to get a result, the runtime is outside Python, in fact all back-end of TensorFlow is wrote in C++, and can use GPU to accelerate the process, so to avoid any copy from CPU to GPU what is slow, all graph must me assembled before to be executed.
+
+\section{Nodes and operations}
+The piece of cod above gives the follow graph:
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.8\textwidth]{img/const_add.png}
+    \caption{nodes of constants sum graph}
+    \label{fig:const_add}
+\end{figure}
+
+Sum constants is not so useful, so TensorFlow has others kind of input nodes, as variables and placeholders, and a node can make an operation as sum, multiplication, convolution and others.
+
+\section{The model}
+
+The TensorFlow model is the graph nodes and the weights, and all of TensorFlow's file formats are based on Protocol Buffers.
+
+\subsection{graph}
+The main object of TensorFlow is the graph, this holds a network of nodes, each representing one operation, connected to each other as inputs and outputs.
+
+\begin{minted}{protobuf}
+message GraphDef {
+  repeated NodeDef node = 1;
+  int32 version = 3 [deprecated = true];
+  FunctionDefLibrary library = 2;
+};
+\end{minted}
+
+Where the keyword repeated say to protobuf that GraphDef has several instance of NodeDef, in fact it is the heart of TensorFlow's model.
+
+\subsection{Nodes}
+
+The NodeDef object  are the fundamental building blocks of TensorFlow graphs, with each one defining a single operation along with its input connections. Here are the protobuf definition of NodeDef.
+
+\begin{minted}{protobuf}
+message NodeDef {
+  string name = 1;
+  string op = 2;
+  repeated string input = 3;
+  string device = 4;
+  map<string, AttrValue> attr = 5;
+};
+\end{minted}
+
+\subsubsection{name}
+Every node should have a unique identifier that's not used by any other nodes in the graph. The name is used when defining the connections between nodes, and when setting inputs and outputs for the whole graph when it's run.
+
+\subsubsection{op}
+This defines what operation to run, for example "Add", "MatMul", or "Conv2D".
+
+\subsubsection{input}
+A list of strings, each one of which is the name of another node. For example, a node with two inputs might have a list like \["some_node_name", "another_node_name"\].
+
+\subsubsection{device}
+Defines where to run a node in a distributed environment, or when you want to force the operation onto CPU or GPU.
+
+\subsubsection{attr}
+This is a key/value store holding all the attributes of a node. These are the permanent properties of nodes, it means, they don't change when you run the graph, for example, a constant value can't change when you run the graph.
+Each attribute has a unique name string, and the expected attributes are listed when the operation is defined. If an attribute isn't present in a node, but it has a default listed in the operation definition, that default is used when the graph is created.
+
+The protobuf definition for attr.
+
+\begin{minted}{protobuf}
+import "tensorflow/core/framework/tensor.proto";
+import "tensorflow/core/framework/tensor_shape.proto";
+import "tensorflow/core/framework/types.proto";
+
+message AttrValue {
+  message ListValue {
+    repeated bytes s = 2;                        // "list(string)"
+    repeated int64 i = 3 [packed = true];        // "list(int)"
+    repeated float f = 4 [packed = true];        // "list(float)"
+    repeated bool b = 5 [packed = true];         // "list(bool)"
+    repeated DataType type = 6 [packed = true];  // "list(type)"
+    repeated TensorShapeProto shape = 7;         // "list(shape)"
+    repeated TensorProto tensor = 8;             // "list(tensor)"
+    repeated NameAttrList func = 9;              // "list(attr)"
+  }
+
+  oneof value {
+    bytes s = 2;                 // "string"
+    int64 i = 3;                 // "int"
+    float f = 4;                 // "float"
+    bool b = 5;                  // "bool"
+    DataType type = 6;           // "type"
+    TensorShapeProto shape = 7;  // "shape"
+    TensorProto tensor = 8;      // "tensor"
+    ListValue list = 1;          // any "list(...)"
+
+    NameAttrList func = 10;
+
+    string placeholder = 9;
+  }
+}
+
+message NameAttrList {
+  string name = 1;
+  map<string, AttrValue> attr = 2;
+}
+\end{minted}
+
+\subsection{Weights}
+
+The main use of TensorFlow today is to create, train and run neural network, so we need a way to store this waits in the model. A common way to store them, for example in graphs created by the freeze\_graph script, is as Const ops containing the weights as Tensors. These are defined in protobuf.
+
+\begin{minted}{protobuf}
+message TensorProto {
+  TensorShapeProto tensor_shape = 2;
+  int32 version_number = 3;
+  bytes tensor_content = 4;
+  repeated int32 half_val = 13 [packed = true];
+  repeated float float_val = 5 [packed = true];
+  repeated double double_val = 6 [packed = true];
+  repeated int32 int_val = 7 [packed = true];
+  repeated bytes string_val = 8;
+  repeated float scomplex_val = 9 [packed = true];
+  repeated int64 int64_val = 10 [packed = true];
+  repeated bool bool_val = 11 [packed = true];
+  repeated double dcomplex_val = 12 [packed = true];
+  repeated ResourceHandleProto resource_handle_val = 14;
+  repeated VariantTensorDataProto variant_val = 15;
+};
+
+message VariantTensorDataProto {
+  string type_name = 1;
+  bytes metadata = 2;
+  repeated TensorProto tensors = 3;
+}
+\end{minted}
+
+The Tensor object can be stored in a constant node for example.
+
+\chapter{XLA}
+
+XLA (Accelerated Linear Algebra) is a compiler for linear algebra that optimizes TensorFlow computations. XLA works with just-in-time (JIT) compilation or ahead-of-time (AOT) compilation, and the objectives are Improve execution speed, Improve memory usage, Reduce reliance on custom Ops , Reduce mobile footprint and Improve portability.
+
+The input language to XLA is called "HLO IR", or just HLO (High Level Optimizer), the HLO can be understood like LLVM IR.
+
+The following diagram shows the compilation process in XLA:
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.8\textwidth]{img/how-does-xla-work.png}
+    \caption{compilation process in XLA}
+    \label{fig:const_add}
+\end{figure}
+
+The target-specific code generation. The CPU and GPU back-ends included with XLA use LLVM for low-level IR, optimization, and code-generation. These back-ends emit the LLVM IR necessary to represent the XLA HLO computation in an efficient manner, and then invoke LLVM to emit native code from this LLVM IR.
+
+So, if we want that XLA support a new architecture we only have to change the last layer, and it is possible add new architectures extending some classes.
+
+\section{Developing a new back-end for XLA}
+
+XLA provides an abstract interface that a new architecture or accelerator can implement to create a backend to run TensorFlow graphs. It is need knowledge of LLVM, Bazel, and TensorFlow.
+
+\section{JIT Compilation}
+
+The JIT compilation compiles and runs parts of TensorFlow graphs via XLA, it has the advantage of analyses and try to otmize to run several operation into a small number of compiled kernels, it means while Tensorflow runtime has to run each operation separately, the JIT can reduce memory bandwidth requirements and improve performance.
+
+There are two ways to run TensorFlow computations via XLA, either by JIT-compiling operators placed on a CPU or GPU device, or by placing operators on the XLA\_CPU or XLA\_GPU TensorFlow devices. It means, when describing the graph on python interface, the user can specify if the JIT compile will be used, or the automatic way (session), that you specify that a session will use JIT, and XLA will decide which operation must be done using the JIT.
+
+\subsection{Session - automatic}
+Turning on JIT compilation at the session level will result in all possible operators being greedily compiled into XLA computations. Each XLA computation will be compiled into one or more kernels for the underlying device.
+
+Follows an example of using that on python.
+
+\begin{minted}{python}
+# Config to turn on JIT compilation
+config = tf.ConfigProto()
+config.graph_options.optimizer_options.global_jit_level = tf.OptimizerOptions.ON_1
+
+sess = tf.Session(config=config)
+\end{minted}
+
+\subsection{Manual}
+
+In the manual mode you can decide which operation nodes must be done using JIT, for example:
+
+\begin{minted}{python}
+jit_scope = tf.contrib.compiler.jit.experimental_jit_scope
+
+x = tf.placeholder(np.float32)
+with jit_scope():
+    y = tf.add(x, x)  # The "add" will be compiled with XLA.
+\end{minted}
+
+\section{AOT compilation}
+\subsection{tfcompile}
+
+tfcompile implements ahead-of-time (AOT) compilation for TensorFlow graphs, it means, it compiles Tensorflow model into native machine code, tfcompile uses LLVM API to generate native code, and make some optimization.
+
+The TensorFlow graph is normally executed by the TensorFlow runtime. This incurs some runtime overhead for execution of each node in the graph. This also leads to a larger total binary size, since the code for the TensorFlow runtime needs to be available, in addition to the graph itself, the tfcompile can reduce total binary size, and also avoid some runtime overheads.
+
+For use the tfcompile you have to follow some steps:
+
+\subsection{Configure the subgraph to compile}
+
+Identify the feeds and fetches that correspond to the input and output arguments for the generated function. Then configure the feeds and fetches in a tensorflow.tfcompile.Config proto.
+
+\begin{minted}{protobuf}
+# Each feed is a positional input argument for the generated function.  The order
+# of each entry matches the order of each input argument.  Here “x_hold” and “y_hold”
+# refer to the names of placeholder nodes defined in the graph.
+feed {
+  id { node_name: "x_hold" }
+  shape {
+    dim { size: 2 }
+    dim { size: 3 }
+  }
+}
+feed {
+  id { node_name: "y_hold" }
+  shape {
+    dim { size: 3 }
+    dim { size: 2 }
+  }
+}
+
+# Each fetch is a positional output argument for the generated function.  The order
+# of each entry matches the order of each output argument.  Here “x_y_prod”
+# refers to the name of a matmul node defined in the graph.
+fetch {
+  id { node_name: "x_y_prod" }
+}
+\end{minted}
+
+I haven't found a tool to make this step automatically, so you have to identify in the Tensorflow model which is the inputs and outputs.
+
+\subsection{Use tf\_library build macro to compile the subgraph}
+
+This part uses bazel to build the graph, it means, bazel gives to tfcompile the parameters of tensorflow model(pb file), and the file of feed and fetches (input and outputs) and tfcompile generate the an ojbect file, .so, and a header file in C++.
+
+\begin{minted}{python}
+load("//third_party/tensorflow/compiler/aot:tfcompile.bzl", "tf_library")
+
+# Use the tf_library macro to compile your graph into executable code.
+tf_library(
+    # name is used to generate the following underlying build rules:
+    # <name>           : cc_library packaging the generated header and object files
+    # <name>_test      : cc_test containing a simple test and benchmark
+    # <name>_benchmark : cc_binary containing a stand-alone benchmark with minimal deps;
+    #                    can be run on a mobile device
+    name = "test_graph_tfmatmul",
+    # cpp_class specifies the name of the generated C++ class, with namespaces allowed.
+    # The class will be generated in the given namespace(s), or if no namespaces are
+    # given, within the global namespace.
+    cpp_class = "foo::bar::MatMulComp",
+    # graph is the input GraphDef proto, by default expected in binary format.  To
+    # use the text format instead, just use the ‘.pbtxt’ suffix.  A subgraph will be
+    # created from this input graph, with feeds as inputs and fetches as outputs.
+    # No Placeholder or Variable ops may exist in this subgraph.
+    graph = "test_graph_tfmatmul.pb",
+    # config is the input Config proto, by default expected in binary format.  To
+    # use the text format instead, use the ‘.pbtxt’ suffix.  This is where the
+    # feeds and fetches were specified above, in the previous step.
+    config = "test_graph_tfmatmul.config.pbtxt",
+)
+\end{minted}
+
+tfcompile can't compile variables, so you must use this script to convert variables in constants (https://github.com/tensorflow/tensorflow/blob/r1.3/tensorflow/python/tools/freeze_graph.py), this variables is not the input variables, it is the parameters of your network, the inputs must be specified in tfcompile.Config file.
+
+\section{Invoke the subgraph}
+
+After build with bazel, an object file and a header file is generate to use with C++, in this example, the C++ header has the follow format:
+
+\begin{minted}{c++}
+
+namespace foo {
+namespace bar {
+
+// MatMulComp represents a computation previously specified in a
+// TensorFlow graph, now compiled into executable code.
+class MatMulComp {
+ public:
+  // AllocMode controls the buffer allocation mode.
+  enum class AllocMode {
+    ARGS_RESULTS_AND_TEMPS,  // Allocate arg, result and temp buffers
+    RESULTS_AND_TEMPS_ONLY,  // Only allocate result and temp buffers
+  };
+
+  MatMulComp(AllocMode mode = AllocMode::ARGS_RESULTS_AND_TEMPS);
+  ~MatMulComp();
+
+  // Runs the computation, with inputs read from arg buffers, and outputs
+  // written to result buffers. Returns true on success and false on failure.
+  bool Run();
+
+  // Arg methods for managing input buffers. Buffers are in row-major order.
+  // There is a set of methods for each positional argument.
+  void** args();
+
+  void set_arg0_data(float* data);
+  float* arg0_data();
+  float& arg0(size_t dim0, size_t dim1);
+
+  void set_arg1_data(float* data);
+  float* arg1_data();
+  float& arg1(size_t dim0, size_t dim1);
+
+  // Result methods for managing output buffers. Buffers are in row-major order.
+  // Must only be called after a successful Run call. There is a set of methods
+  // for each positional result.
+  void** results();
+
+  float* result0_data();
+  float& result0(size_t dim0, size_t dim1);
+};
+
+}  // end namespace bar
+}  // end namespace foo
+\end{minted}
+
+Where set\_arg0\_data and set\_arg1\_data are used to give the input, so you must run and get the result with result0\_data, the dimension is according what was passed in config file.
+
+Follows an example to use the files generated by tfcompile:
+
+\begin{minted}{c++}
+#define EIGEN_USE_THREADS
+#define EIGEN_USE_CUSTOM_THREAD_POOL
+
+#include <iostream>
+#include "third_party/eigen3/unsupported/Eigen/CXX11/Tensor"
+#include "tensorflow/compiler/aot/tests/test_graph_tfmatmul.h" // generated
+
+int main(int argc, char** argv) {
+  Eigen::ThreadPool tp(2);  // Size the thread pool as appropriate.
+  Eigen::ThreadPoolDevice device(&tp, tp.NumThreads());
+
+  foo::bar::MatMulComp matmul;
+  matmul.set_thread_pool(&device);
+
+  // Set up args and run the computation.
+  const float args[12] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12};
+  std::copy(args + 0, args + 6, matmul.arg0_data());
+  std::copy(args + 6, args + 12, matmul.arg1_data());
+  matmul.Run();
+
+  // Check result
+  if (matmul.result0(0, 0) == 58) {
+    std::cout << "Success" << std::endl;
+  } else {
+    std::cout << "Failed. Expected value 58 at 0,0. Got:"
+              << matmul.result0(0, 0) << std::endl;
+  }
+
+  return 0;
+}
+\end{minted}
+
+\appendix %% Up to you -- I just like to have the end notes as an appendix :-)
+\printnotes*
+
+\end{document}
