@@ -64,7 +64,7 @@ void PrintAttr(const tensorflow::AttrValue& value) {
   }
 }
 
-}
+}  // namespace
 
 int main(int argc, char **argv) {
   if (argc != 2) {
@@ -94,7 +94,7 @@ int main(int argc, char **argv) {
 
     std::cout << "\nnode attr:\n";
 
-    for (auto& name: graph_pb.node(i).attr()) {
+    for (auto& name : graph_pb.node(i).attr()) {
       std::cout << "  " << name.first << ": ";
       PrintAttr(name.second);
       std::cout << "\n";
