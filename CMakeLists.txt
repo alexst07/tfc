@@ -45,7 +45,7 @@ file(GLOB_RECURSE PROTO_HDRS "${PROJECT_SOURCE_DIR}/third-party/google/tensorflo
 #
 # create tensorflow proto library
 #
-add_library(tf_proto ${PROTO_SRCS} ${PROTO_HDRS})
+add_library(tf_proto SHARED ${PROTO_SRCS} ${PROTO_HDRS})
 target_link_libraries(tf_proto ${PROJECT_SOURCE_DIR}/third-party/google/protobuf/lib/libprotobuf.so)
 target_link_libraries(tf_proto ${CMAKE_THREAD_LIBS_INIT})
 
