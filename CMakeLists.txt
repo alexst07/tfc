@@ -9,13 +9,13 @@ include(cmake/utils.cmake)
 #
 # compile flags
 #
-CHECK_CXX_COMPILER_FLAG("-std=c++14" COMPILER_SUPPORTS_CXX14)
-if(COMPILER_SUPPORTS_CXX14)
-  set(CMAKE_CXX_STANDARD 14)
+CHECK_CXX_COMPILER_FLAG("-std=c++17" COMPILER_SUPPORTS_CXX14)
+if(COMPILER_SUPPORTS_CXX17)
+  set(CMAKE_CXX_STANDARD 17)
   set(CMAKE_CXX_STANDARD_REQUIRED ON)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17")
 else()
-  message(STATUS "The compiler ${CMAKE_CXX_COMPILER} has no C++14 support. Please use a different C++ compiler.")
+  message(STATUS "The compiler ${CMAKE_CXX_COMPILER} has no C++17 support. Please use a different C++ compiler.")
 endif()
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra")
@@ -34,7 +34,6 @@ find_package(Threads)
 include_directories(SYSTEM ${Eigen_INCLUDE_DIRS})
 include_directories(SYSTEM ${PROJECT_SOURCE_DIR}/third-party/google/protobuf/include/)
 include_directories(SYSTEM ${PROJECT_SOURCE_DIR}/third-party/google/tensorflow/)
-include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
 #
 # list tensorflow proto generated files
@@ -50,3 +49,4 @@ target_link_libraries(tf_proto ${PROJECT_SOURCE_DIR}/third-party/google/protobuf
 target_link_libraries(tf_proto ${CMAKE_THREAD_LIBS_INIT})
 
 add_subdirectory(tools)
+add_subdirectory(src)

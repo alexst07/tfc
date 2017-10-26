@@ -26,7 +26,7 @@ if !path.exists(lint_path + "cpplint.py") {
 lint_exec = lint_path + "cpplint.py"
 chmod +x ${lint_exec}
 
-lint_paths = ["tools"]
+lint_paths = ["tools", "src"]
 
 setup.on_path(__path__ + "/../", func() {
   for p in lint_paths {
@@ -38,4 +38,3 @@ setup.on_path(__path__ + "/../", func() {
     }
   }
 })
-
