@@ -396,6 +396,110 @@ int main(int argc, char** argv) {
 }
 \end{minted}
 
+\section{HLO}
+HLO (High Level Optimizer) works like instruction in LLVM, but in HLO it works with tensor, for example, you have ADD operation between two tensors, follow an example that add two constants:
+
+\begin{minted}{c++}
+auto builder = HloComputation::Builder(TestName());
+auto constant1 = builder.AddInstruction(HloInstruction::CreateConstant(
+  test_utils::CreateR2LiteralWithLayout<float>({{1.0, 2.0}, {3.0, 4.0}},
+                                               /*minor_to_major=*/{0, 1})));
+auto constant2 = builder.AddInstruction(HloInstruction::CreateConstant(
+  test_utils::CreateR2LiteralWithLayout<float>({{1.0, 2.0}, {3.0, 4.0}},
+                                               /*minor_to_major=*/{1, 0})));
+auto add = builder.AddInstruction(HloInstruction::CreateBinary(
+  constant1->shape(), HloOpcode::kAdd, constant1, constant2));
+\end{minted}
+
+In that moment these are the HLO instrutions supported:
+
+\begin{minted}{c++}
+enum class HloOpcode {
+  kAbs,
+  kAdd,
+  kAtan2,
+  kBatchNormGrad,
+  kBatchNormInference,
+  kBatchNormTraining,
+  kBitcast,
+  kBroadcast,
+  kCall,
+  kCeil,
+  kClamp,
+  kComplex,
+  kConcatenate,
+  kConstant,
+  kConvert,
+  kConvolution,
+  kCopy,
+  kCos,
+  kCrossReplicaSum,
+  kCustomCall,
+  kDivide,
+  kDot,
+  kDynamicSlice,
+  kDynamicUpdateSlice,
+  kEq,
+  kExp,
+  kFloor,
+  kFusion,
+  kGe,
+  kGetTupleElement,
+  kGt,
+  kImag,
+  kIndex,
+  kInfeed,
+  kIsFinite,
+  kLe,
+  kLog,
+  kAnd,
+  kNot,
+  kOr,
+  kLt,
+  kMap,
+  kMaximum,
+  kMinimum,
+  kMultiply,
+  kNe,
+  kNegate,
+  kOutfeed,
+  kPad,
+  kParameter,
+  kPower,
+  kReal,
+  kRecv,
+  kReduce,
+  kReducePrecision,
+  kReduceWindow,
+  kRemainder,
+  kReshape,
+  kReverse,
+  kRng,
+  kRoundNearestAfz,
+  kSelect,
+  kSelectAndScatter,
+  kSend,
+  kShiftLeft,
+  kShiftRightArithmetic,
+  kShiftRightLogical,
+  kSign,
+  kSin,
+  kSlice,
+  kSort,
+  kSubtract,
+  kTanh,
+  kTrace,
+  kTranspose,
+  kTuple,
+  kWhile,
+};
+\end{minted}
+
+The optimizations works overs these instructions, for example constant folding, CSE and DCE.
+On hlo\_constant\_folding.cc file we can see better how HLO classes works, on this case, it iterate over al instructions, and check for instructions that are opeartions, if these operations receive constants are operands, is so, it optimize this operation change for a constant.
+
+These kind of optimization is made over HLO instructions, because it is easy to analyze the tensors on this level.
+
 \appendix %% Up to you -- I just like to have the end notes as an appendix :-)
 \printnotes*
 
