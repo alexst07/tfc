@@ -1,8 +1,9 @@
 %% The openany option is here just to remove the blank pages before a new chapter
-\documentclass[11pt,openany]{book}
+%\documentclass[11pt,openany]{book}
+\documentclass[11pt, fleqn]{article}
 
-\title{Endnotes using pagenote package at the end of a book}
 
+\usepackage{fullpage}
 \usepackage{pagenote}
 
 %%%%%%%%%%%%% For customising the endnote markers. Comment these out if you don't want them.
@@ -26,16 +27,23 @@
 \usepackage{hyperref}
 \usepackage{minted}
 \usepackage{graphicx}
+\usepackage{float}
 
 \graphicspath{img/}
 
+
+\title{{\Huge \textbf{TensorFlow}}\vspace{-1cm}}
+\date{}
+\maketitle
+
 \begin{document}
+%\section{Introduction}
 
-\chapter{TensorFlow}
-\section{Intruduction}
-TensorFlow is a framework for numerical computation using data flow graphs. Nodes in the graph represent mathematical operations, and the graph edges represent the multidimensional data arrays (tensors) communicated between them. This architecture gives flexibility as process some nodes on a GPU and others on a CPU, or process the graph in a cluster.
+\section{Tensorflow}
+TensorFlow is a framework for numerical computation using data flow graphs. Nodes in the graph represent mathematical operations (e.g. sum), and the graph edges represent the multidimensional data arrays (tensors) communicated between them. This architecture gives flexibility to process some nodes on a GPU and others on a CPU, or process the graph in a cluster.
 
-For example, if we want sum two constants using TensorFlow:
+%For example, if we want sum two constants using TensorFlow:
+A simple example of an use of Tensorflow is shown below. This example performs a computation that adds two constants (node1 and node2)  and stores the result into node3. Executing this example gives 7.0 as result.
 
 \begin{minted}{python}
 node1 = tf.constant(3.0, dtype=tf.float32)
@@ -46,10 +54,17 @@ sess = tf.Session()
 print(sess.run(node3))
 \end{minted}
 
-This piece of code gives 7.0 as a result, so how it works, first we assembly the graph, after we create a session and run this graph to get a result, the runtime is outside Python, in fact all back-end of TensorFlow is wrote in C++, and can use GPU to accelerate the process, so to avoid any copy from CPU to GPU what is slow, all graph must me assembled before to be executed.
+During the computation of the example shown above, the following steps are taken: First, a TensorFlow Graph (TFG) is built from the nodes as shown the Figure \ref{fig:TFG_simple}. After that, it is created a session that encapsulates the control and state of the TensorFlow runtime. Finally, the command run is invoked in order to execute the TFG built. 
 
-\section{Tensors}
-The central unit of data in TensorFlow is the tensor. A tensor consists of a set of primitive values shaped into an array of any number of dimensions. A tensor's rank is its number of dimensions. Here are some examples of tensors.
+\begin{figure}[!htp]
+    \centering
+    \includegraphics[width=0.4\textwidth]{img/const_add.png}
+    \caption{TensorFlow Graph example}
+    \label{fig:TFG_simple}
+\end{figure}
+
+\subsection{Tensors}
+The central unit of data in TensorFlow is the tensor. A tensor consists of a set of primitive values shaped into an array of any number of dimensions. Some examples of tensors are described below.
 
 \begin{minted}{python}
 3 # a rank 0 tensor; a scalar with shape []
@@ -58,37 +73,34 @@ The central unit of data in TensorFlow is the tensor. A tensor consists of a set
 [[[1., 2., 3.]], [[7., 8., 9.]]] # a rank 3 tensor with shape [2, 1, 3]
 \end{minted}
 
-\section{Rank and Shape}
-The rank of a tf.Tensor object is its number of dimensions. Synonyms for rank include order or degree or n-dimension. Note that rank in TensorFlow is not the same as matrix rank in mathematics. As the following table shows, each rank in TensorFlow corresponds to a different mathematical entity:
+\subsection{Rank and Shape}
+The rank of a tf.Tensor object is its number of dimensions as shown Figure \ref{fig:rank}.  The shape of an tf.Tensor object describes the number of elements in each dimension as shown in the Figure \ref{fig:shape}.
 
 \begin{figure}[h]
     \centering
     \includegraphics[width=0.8\textwidth]{img/rank.png}
-    \caption{ranking examples}
-    \label{fig:const_add}
+    \caption{Rank}
+    \label{fig:rank}
 \end{figure}
 
 \begin{figure}[h]
     \centering
     \includegraphics[width=0.8\textwidth]{img/shape.png}
-    \caption{sapes examples}
-    \label{fig:const_add}
+    \caption{Shapes}
+    \label{fig:shape}
 \end{figure}
 
 
-\section{Constants}
-
-Constants Variables have a value that does not change during runtime.
+\subsection{Constants}
+Constants is one type of tensor that has a value that does not change during runtime as in the case of the following example:
 
 \begin{minted}{python}
 node1 = tf.constant(3.0, dtype=tf.float32)
 node2 = tf.constant(4.0) # also tf.float32 implicitly
-print(node1, node2)
 \end{minted}
 
-\section{Placeholders}
-
-A graph can be parameterized to accept external inputs, known as placeholders. A placeholder is a promise to provide a value later.
+\subsection{Placeholders}
+A graph can be parameterized to accept external inputs, known as placeholders. A placeholder is a tensor that usually receives a value before the execution of an TFG, as follow: 
 
 \begin{minted}{python}
 a = tf.placeholder(tf.float32)
@@ -99,9 +111,9 @@ print(sess.run(adder_node, {a: 3, b: 4.5}))
 print(sess.run(adder_node, {a: [1, 3], b: [2, 4]}))
 \end{minted}
 
-\section{Variables}
 
-To make the model trainable, we need to be able to modify the graph to get new outputs with the same input. Variables allow us to add trainable parameters to a graph.
+\subsection{Variables}
+To make the model trainable, we need to be able to modify the graph to get new outputs with the same input. Variables is a type of tensor that allows us to add trainable parameters to a graph.
 A variable is the best way to represent shared, persistent state manipulated by your program.
 
 \begin{minted}{python}
@@ -113,197 +125,190 @@ sess = tf.Session()
 print(sess.run(linear_model, {x: [1, 2, 3, 4]}))
 \end{minted}
 
-\section{Nodes and operations}
-The piece of cod above gives the follow graph:
+\subsection{TensorFlow Graph}
+A TensorFlow Graph is composed of operations arranged in a graph, where a node describes an operation and the edges represent tensors. The TensorFlow example below generate the TFG that is shown in Figure \ref{fig:tfg_ex}.
 
-\begin{figure}[h]
+\begin{minted}{python}
+X = tf.placeholder(tf.float32)
+Y = tf.placeholder(tf.float32)
+Constant = tf.constant(5, tf.float32)
+
+add = tf.add(X,Y)
+mult = tf.multiply(add, Constant)
+
+session = tf.Session()
+result = session.run(mult, feed_dict={X: [5,2,1] , Y: [10,6,1]})
+
+\end{minted}
+ 
+
+\begin{figure}[H]
     \centering
-    \includegraphics[width=0.8\textwidth]{img/const_add.png}
-    \caption{nodes of constants sum graph}
-    \label{fig:const_add}
+    \includegraphics[width=0.2\textwidth]{img/tfg_example.png}
+    \caption{TensorFlow Graph}
+    \label{fig:tfg_ex}
 \end{figure}
 
-Sum constants is not so useful, so TensorFlow has others kind of input nodes, as variables and placeholders, and a node can make an operation as sum, multiplication, convolution and others.
 
-\chapter{The model}
+\subsection{TensorFlow Runtime}
+The TensorFlow runtime sweeps all nodes in the TFG and executes each one of them according to the operation
+that it describes (e.g. multiply). The user can use TensorFlow in several different languages (e.g. Python, Java). 
 
-The TensorFlow model is the graph nodes and the weights, and all of TensorFlow's file formats are based on Protocol Buffers.
+The Figure \ref{fig:tfg_runtime} shows the steps taken when executing a TensorFlow's program. 
+First, given a TensorFlow code, it is converted into an TFG. After that, the TensorFlow runtime sweeps
+this TFG executing each operation contained in it.  
+Given a specific operation (e.g. Add) the Executor seeks at the available Kernels the most 
+appropriate for the user's architecture.
 
-\subsection{graph}
-The main object of TensorFlow is the graph, this holds a network of nodes, each representing one operation, connected to each other as inputs and outputs.
 
-\begin{minted}{protobuf}
-message GraphDef {
-  repeated NodeDef node = 1;
-  int32 version = 3 [deprecated = true];
-  FunctionDefLibrary library = 2;
-};
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.7\textwidth]{img/tf_runtime.png}
+    \caption{TensorFlow Runtime}
+    \label{fig:tfg_runtime}
+\end{figure}
+
+
+\subsection{Device Placement}
+
+The TensorFlow allows the user to choose the device where a given variable will be allocated as described below.
+
+\begin{minted}{python}
+with tf.device("/gpu:1"):
+  v = tf.get_variable("v", [1])
 \end{minted}
 
-Where the keyword repeated say to protobuf that GraphDef has several instance of NodeDef, in fact it is the heart of TensorFlow's model.
+It is also possible to choose a given device (e.g. GPU) to performs a specific computation as shown below.
 
-\subsection{Nodes}
+\begin{minted}{python}
+with tf.device("/device:CPU:0"):
+  # Operations created in this context will be pinned to the CPU.
+  img = tf.decode_jpeg(tf.read_file("img.jpg"))
 
-The NodeDef object  are the fundamental building blocks of TensorFlow graphs, with each one defining a single operation along with its input connections. Here are the protobuf definition of NodeDef.
-
-\begin{minted}{protobuf}
-message NodeDef {
-  string name = 1;
-  string op = 2;
-  repeated string input = 3;
-  string device = 4;
-  map<string, AttrValue> attr = 5;
-};
+with tf.device("/device:GPU:0"):
+  # Operations created in this context will be pinned to the GPU.
+  result = tf.matmul(weights, img)
 \end{minted}
 
-\subsubsection{name}
-Every node should have a unique identifier that's not used by any other nodes in the graph. The name is used when defining the connections between nodes, and when setting inputs and outputs for the whole graph when it's run.
+\subsection{TensorBoard}
+The computations that uses TensorFlow - like training a massive deep neural network - can be complex and confusing. To make it easier to understand, debug, and optimize TensorFlow programs, it is possible to use a suite of visualization tools called TensorBoard. It is possible to use TensorBoard to visualize the TensorFlow graph, plot quantitative metrics about the execution of your graph, and show additional data like images that pass through it.
+ 
 
-\subsubsection{op}
-This defines what operation to run, for example "Add", "MatMul", or "Conv2D".
-
-\subsubsection{input}
-A list of strings, each one of which is the name of another node. For example, a node with two inputs might have a list like \["some_node_name", "another_node_name"\].
-
-\subsubsection{device}
-Defines where to run a node in a distributed environment, or when you want to force the operation onto CPU or GPU.
-
-\subsubsection{attr}
-This is a key/value store holding all the attributes of a node. These are the permanent properties of nodes, it means, they don't change when you run the graph, for example, a constant value can't change when you run the graph.
-Each attribute has a unique name string, and the expected attributes are listed when the operation is defined. If an attribute isn't present in a node, but it has a default listed in the operation definition, that default is used when the graph is created.
-
-The protobuf definition for attr.
-
-\begin{minted}{protobuf}
-import "tensorflow/core/framework/tensor.proto";
-import "tensorflow/core/framework/tensor_shape.proto";
-import "tensorflow/core/framework/types.proto";
-
-message AttrValue {
-  message ListValue {
-    repeated bytes s = 2;                        // "list(string)"
-    repeated int64 i = 3 [packed = true];        // "list(int)"
-    repeated float f = 4 [packed = true];        // "list(float)"
-    repeated bool b = 5 [packed = true];         // "list(bool)"
-    repeated DataType type = 6 [packed = true];  // "list(type)"
-    repeated TensorShapeProto shape = 7;         // "list(shape)"
-    repeated TensorProto tensor = 8;             // "list(tensor)"
-    repeated NameAttrList func = 9;              // "list(attr)"
-  }
-
-  oneof value {
-    bytes s = 2;                 // "string"
-    int64 i = 3;                 // "int"
-    float f = 4;                 // "float"
-    bool b = 5;                  // "bool"
-    DataType type = 6;           // "type"
-    TensorShapeProto shape = 7;  // "shape"
-    TensorProto tensor = 8;      // "tensor"
-    ListValue list = 1;          // any "list(...)"
-
-    NameAttrList func = 10;
-
-    string placeholder = 9;
-  }
-}
-
-message NameAttrList {
-  string name = 1;
-  map<string, AttrValue> attr = 2;
-}
-\end{minted}
-
-\subsection{Weights}
-
-The main use of TensorFlow today is to create, train and run neural network, so we need a way to store this waits in the model. A common way to store them, for example in graphs created by the freeze\_graph script, is as Const ops containing the weights as Tensors. These are defined in protobuf.
-
-\begin{minted}{protobuf}
-message TensorProto {
-  TensorShapeProto tensor_shape = 2;
-  int32 version_number = 3;
-  bytes tensor_content = 4;
-  repeated int32 half_val = 13 [packed = true];
-  repeated float float_val = 5 [packed = true];
-  repeated double double_val = 6 [packed = true];
-  repeated int32 int_val = 7 [packed = true];
-  repeated bytes string_val = 8;
-  repeated float scomplex_val = 9 [packed = true];
-  repeated int64 int64_val = 10 [packed = true];
-  repeated bool bool_val = 11 [packed = true];
-  repeated double dcomplex_val = 12 [packed = true];
-  repeated ResourceHandleProto resource_handle_val = 14;
-  repeated VariantTensorDataProto variant_val = 15;
-};
-
-message VariantTensorDataProto {
-  string type_name = 1;
-  bytes metadata = 2;
-  repeated TensorProto tensors = 3;
-}
-\end{minted}
-
-The Tensor object can be stored in a constant node for example.
-
-\chapter{XLA}
+\section{XLA}
 
 XLA (Accelerated Linear Algebra) is a compiler for linear algebra that optimizes TensorFlow computations. XLA works with just-in-time (JIT) compilation or ahead-of-time (AOT) compilation, and the objectives are Improve execution speed, Improve memory usage, Reduce reliance on custom Ops , Reduce mobile footprint and Improve portability.
 
-The input language to XLA is called "HLO IR", or just HLO (High Level Optimizer), the HLO can be understood like LLVM IR.
+The optimization that improves the execution speed comes mainly by the ability of XLA to fuse operations. The TensorFlow runtime - without the XLA compilation, works by loading the inputs from the memory, perform the computation that uses it, and store the result into the memory before executing the next node in the TFG. Fuse computation means performing more than one node at the same time. For example, the piece of code below: 
 
-The following diagram shows the compilation process in XLA:
+\begin{minted}{C}
+for(...) //Kernel 1
+   A[i] = B[i] + C[i];
+
+for(...) //Kernel 2
+   D[i] = A[i] * B[i];
+\end{minted} 
+
+Can be converted into just:
+
+\begin{minted}{C}
+for(...) //Kernel 1 and Kernel 2 merged
+   D[i] = (B[i] + C[i]) * B[i];
+\end{minted} 
+
+Besides the fact of fusing operations, which eliminates the necessity of loading from memory the input between the Kernel 1 and Kernel 2. It also reduces the memory usage - given that the array A will not be created after the optimization.
+
+The diagram in Figure \ref{fig:xla_2} shows the entire execution when TensorFlow perfoms JIT or AOT. In the sequence the graph will be explained in details.
+
+\begin{figure}[!htb]
+    \centering
+    \includegraphics[width=0.7\textwidth]{flow/flow.pdf}
+    \caption{TensorFlow execution with JIT and AOT}
+    \label{fig:xla_2}
+\end{figure}
+
+From the code written by the user, the first step taken during the execution is the construction of the TFG. The persistent way to describe an TFG is by using the protobuf. The TFG is used to feed both JIT and HLO - by means of a protobuf file. 
+
+The XLA, in summary, is composed of libraries that perform transformations, optimizations during  JIT and AOT executions. Those libraries are: core, xla and tf2xla.
+
+The library core defines several features used by TensorFlow. Besides the data structures, common functions, protobuf definitions and others. The core is responsible to execute the TensorFlow runtime (executor).
+
+The library xla, in general, is responsible to convert a given XLA Graph into binary. First, the XLA graph - also known as HLO IR, or just HLO (High Level Optimizer), is lowered to an LLVM IR in order to be compiled by the LLVM to a given binary of a specific architecture (e.g. x86), as shown in Figure \ref{fig:xla_xlalib}. 
+
+The CPU and GPU back-ends included with XLA use LLVM for low-level IR, optimization, and code-generation. These back-ends emit the LLVM IR necessary to represent the XLA HLO computation in an efficient manner, and then invoke LLVM to emit native code from this LLVM IR.
 
 \begin{figure}[h]
     \centering
-    \includegraphics[width=0.8\textwidth]{img/how-does-xla-work.png}
-    \caption{compilation process in XLA}
-    \label{fig:const_add}
+    \includegraphics[width=0.7\textwidth]{img/xlalib.png}
+    \caption{Library xla}
+    \label{fig:xla_xlalib}
 \end{figure}
 
-The target-specific code generation. The CPU and GPU back-ends included with XLA use LLVM for low-level IR, optimization, and code-generation. These back-ends emit the LLVM IR necessary to represent the XLA HLO computation in an efficient manner, and then invoke LLVM to emit native code from this LLVM IR.
+The library tf2xla is responsible to convert an TFG into an XLA Graph. The Figure \ref{fig:xla_xlalib} shows it by converting the entire TensorFlow Graph into an XLA Graph. For instance, the node add - that performs the operation of addition, is converted to just one node at the XLA Graph. On the other hands, the softmax node in the XLA Graph is converted into three nodes in the XLA Graph. The conversion is done by means of a tf2xla kernels, that maintain all correspondents XLA nodes to a given TFG node. 
 
-So, if we want that XLA support a new architecture we only have to change the last layer, and it is possible add new architectures extending some classes.
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.7\textwidth]{img/tf2xlalib.png}
+    \caption{Library tf2xla}
+    \label{fig:xla_xlalib}
+\end{figure}
 
-\section{Developing a new back-end for XLA}
+The following sections describe in more details the flow taken by JIT and AOT according to the Figure \ref{fig:xla_2}.
 
-XLA provides an abstract interface that a new architecture or accelerator can implement to create a backend to run TensorFlow graphs. It is need knowledge of LLVM, Bazel, and TensorFlow.
-
-\section{JIT Compilation}
+\subsection{JIT Compilation}
 
 The JIT compilation compiles and runs parts of TensorFlow graphs via XLA, it has the advantage of analyses and try to otmize to run several operation into a small number of compiled kernels, it means while Tensorflow runtime has to run each operation separately, the JIT can reduce memory bandwidth requirements and improve performance.
 
 There are two ways to run TensorFlow computations via XLA, either by JIT-compiling operators placed on a CPU or GPU device, or by placing operators on the XLA\_CPU or XLA\_GPU TensorFlow devices. It means, when describing the graph on python interface, the user can specify if the JIT compile will be used, or the automatic way (session), that you specify that a session will use JIT, and XLA will decide which operation must be done using the JIT.
 
-\subsection{Session - automatic}
-Turning on JIT compilation at the session level will result in all possible operators being greedily compiled into XLA computations. Each XLA computation will be compiled into one or more kernels for the underlying device.
-
-Follows an example of using that on python.
+Turning on JIT compilation at the session level will result in all possible operators being greedily compiled into XLA computations. Each XLA computation will be compiled into one or more kernels for the underlying device. Follows an example of using that on python.
 
 \begin{minted}{python}
 # Config to turn on JIT compilation
 config = tf.ConfigProto()
 config.graph_options.optimizer_options.global_jit_level = tf.OptimizerOptions.ON_1
-
 sess = tf.Session(config=config)
 \end{minted}
-
-\subsection{Manual}
 
 In the manual mode you can decide which operation nodes must be done using JIT, for example:
 
 \begin{minted}{python}
 jit_scope = tf.contrib.compiler.jit.experimental_jit_scope
-
 x = tf.placeholder(np.float32)
 with jit_scope():
     y = tf.add(x, x)  # The "add" will be compiled with XLA.
 \end{minted}
 
-\section{AOT compilation}
-\subsection{tfcompile}
 
-tfcompile implements ahead-of-time (AOT) compilation for TensorFlow graphs, it means, it compiles Tensorflow model into native machine code, tfcompile uses LLVM API to generate native code, and make some optimization.
+During the execution of a program with JIT (e.g. annotated to be compiled), the executor identify the node before its execution and identify if this module were compiled previously. If so, the compiled module is used and the execution continues to the next nodes in the TFG. Otherwise, the TFG is node is compiled into HLO IR, it passes into several optimizations, then it is transformed into an LLVM IR, and finally, it is compiled. The binary is executed and the runtime continues its execution, executing the following nodes.
+
+
+The example in Figure \ref{fig:xla_jitex} shows how JIT works. First, it identifies the nodes to be compiled, then the nodes are compiled and executed.
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.68\textwidth]{img/jit_ex.png}
+    \caption{JIT example}
+    \label{fig:xla_jitex}
+\end{figure}
+
+\section{AOT compilation}
 
 The TensorFlow graph is normally executed by the TensorFlow runtime. This incurs some runtime overhead for execution of each node in the graph. This also leads to a larger total binary size, since the code for the TensorFlow runtime needs to be available, in addition to the graph itself, the tfcompile can reduce total binary size, and also avoid some runtime overheads.
+
+With those characteristics, AOT compilation can be considered one nice approach when using devices with few resources.
+
+\subsection{tfcompile}
+
+tfcompile implements ahead-of-time (AOT) compilation for TensorFlow graphs, it means, it compiles Tensorflow model into native machine code, tfcompile uses LLVM API to generate native code, and make some optimization, according to the Figure \ref{fig:xla_aotex}.
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.68\textwidth]{img/aot_ex.png}
+    \caption{AOT example}
+    \label{fig:xla_aotex}
+\end{figure}
+
+In summary, it is necessary to pass to the tfcompiler the protobuf - file that contains the nodes of the TFG, and a config file containing the feeds and fetches - described below. With those files, the tfcompile generate the HLO IR, that is compiled by using the XLA infrastructure until the binary file. Besides that, the tfcompiler also generate an header file. The tfcompiler does not execute the TensorFlow model, it only generates the binary and header file that has to be linked in a program created by the user. 
 
 For use the tfcompile you have to follow some steps:
 
@@ -338,11 +343,10 @@ fetch {
 }
 \end{minted}
 
-I haven't found a tool to make this step automatically, so you have to identify in the Tensorflow model which is the inputs and outputs.
 
-\subsection{Use tf\_library build macro to compile the subgraph}
+\subsubsection{Use tf\_library build macro to compile the subgraph}
 
-This part uses bazel to build the graph, it means, bazel gives to tfcompile the parameters of tensorflow model(pb file), and the file of feed and fetches (input and outputs) and tfcompile generate the an ojbect file, .so, and a header file in C++.
+This part uses bazel to build the graph, it means, bazel gives to tfcompile the parameters of tensorflow model(pb file), and the file of feed and fetches (input and outputs) and tfcompile generate an ojbect file, .so, and a header file in C++.
 
 \begin{minted}{python}
 load("//third_party/tensorflow/compiler/aot:tfcompile.bzl", "tf_library")
@@ -371,9 +375,9 @@ tf_library(
 )
 \end{minted}
 
-tfcompile can't compile variables, so you must use this script to convert variables in constants (https://github.com/tensorflow/tensorflow/blob/r1.3/tensorflow/python/tools/freeze_graph.py), this variables is not the input variables, it is the parameters of your network, the inputs must be specified in tfcompile.Config file.
+tfcompile cannot compile variables and placeholders, so you must use the freezegraph script to convert variables in constants, this variables is not the input variables, it is the parameters of your network, the inputs must be specified in tfcompile.Config file.
 
-\section{Invoke the subgraph}
+\subsection{Invoke the subgraph}
 
 After build with bazel, an object file and a header file is generate to use with C++, in this example, the C++ header has the follow format:
 
@@ -402,11 +406,9 @@ class MatMulComp {
   // Arg methods for managing input buffers. Buffers are in row-major order.
   // There is a set of methods for each positional argument.
   void** args();
-
   void set_arg0_data(float* data);
   float* arg0_data();
   float& arg0(size_t dim0, size_t dim1);
-
   void set_arg1_data(float* data);
   float* arg1_data();
   float& arg1(size_t dim0, size_t dim1);
@@ -415,7 +417,6 @@ class MatMulComp {
   // Must only be called after a successful Run call. There is a set of methods
   // for each positional result.
   void** results();
-
   float* result0_data();
   float& result0(size_t dim0, size_t dim1);
 };
@@ -460,112 +461,5 @@ int main(int argc, char** argv) {
   return 0;
 }
 \end{minted}
-
-\section{HLO}
-HLO (High Level Optimizer) works like instruction in LLVM, but in HLO it works with tensor, for example, you have ADD operation between two tensors, follow an example that add two constants:
-
-\begin{minted}{c++}
-auto builder = HloComputation::Builder(TestName());
-auto constant1 = builder.AddInstruction(HloInstruction::CreateConstant(
-  test_utils::CreateR2LiteralWithLayout<float>({{1.0, 2.0}, {3.0, 4.0}},
-                                               /*minor_to_major=*/{0, 1})));
-auto constant2 = builder.AddInstruction(HloInstruction::CreateConstant(
-  test_utils::CreateR2LiteralWithLayout<float>({{1.0, 2.0}, {3.0, 4.0}},
-                                               /*minor_to_major=*/{1, 0})));
-auto add = builder.AddInstruction(HloInstruction::CreateBinary(
-  constant1->shape(), HloOpcode::kAdd, constant1, constant2));
-\end{minted}
-
-In that moment these are the HLO instrutions supported:
-
-\begin{minted}{c++}
-enum class HloOpcode {
-  kAbs,
-  kAdd,
-  kAtan2,
-  kBatchNormGrad,
-  kBatchNormInference,
-  kBatchNormTraining,
-  kBitcast,
-  kBroadcast,
-  kCall,
-  kCeil,
-  kClamp,
-  kComplex,
-  kConcatenate,
-  kConstant,
-  kConvert,
-  kConvolution,
-  kCopy,
-  kCos,
-  kCrossReplicaSum,
-  kCustomCall,
-  kDivide,
-  kDot,
-  kDynamicSlice,
-  kDynamicUpdateSlice,
-  kEq,
-  kExp,
-  kFloor,
-  kFusion,
-  kGe,
-  kGetTupleElement,
-  kGt,
-  kImag,
-  kIndex,
-  kInfeed,
-  kIsFinite,
-  kLe,
-  kLog,
-  kAnd,
-  kNot,
-  kOr,
-  kLt,
-  kMap,
-  kMaximum,
-  kMinimum,
-  kMultiply,
-  kNe,
-  kNegate,
-  kOutfeed,
-  kPad,
-  kParameter,
-  kPower,
-  kReal,
-  kRecv,
-  kReduce,
-  kReducePrecision,
-  kReduceWindow,
-  kRemainder,
-  kReshape,
-  kReverse,
-  kRng,
-  kRoundNearestAfz,
-  kSelect,
-  kSelectAndScatter,
-  kSend,
-  kShiftLeft,
-  kShiftRightArithmetic,
-  kShiftRightLogical,
-  kSign,
-  kSin,
-  kSlice,
-  kSort,
-  kSubtract,
-  kTanh,
-  kTrace,
-  kTranspose,
-  kTuple,
-  kWhile,
-};
-\end{minted}
-
-The optimizations works overs these instructions, for example constant folding, CSE and DCE.
-On hlo\_constant\_folding.cc file we can see better how HLO classes works, on this case, it iterate over al instructions, and check for instructions that are opeartions, if these operations receive constants are operands, is so, it optimize this operation change for a constant.
-
-These kind of optimization is made over HLO instructions, because it is easy to analyze the tensors on this level.
-
-\appendix %% Up to you -- I just like to have the end notes as an appendix :-)
-\printnotes*
 
 \end{document}
